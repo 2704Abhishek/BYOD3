@@ -6,6 +6,7 @@ pipeline {
         TF_CLI_ARGS      = '-no-color'
         // Using credentials at a higher level reduces code duplication
         AWS_CREDS        = credentials('aws-creds') 
+        AWS_DEFAULT_REGION = 'us-east-1'
     }
 
     stages {
