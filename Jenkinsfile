@@ -16,14 +16,24 @@ pipeline {
 
         stage('Terraform Initialization') {
             steps {
-                bat 'terraform init'
-                bat 'type %BRANCH_NAME%.tfvars'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    bat 'terraform init'
+                    bat 'type %BRANCH_NAME%.tfvars'
+                }
             }
         }
 
         stage('Terraform Plan') {
             steps {
-                bat "terraform plan -var-file=%BRANCH_NAME%.tfvars"
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    bat "terraform plan -var-file=%BRANCH_NAME%.tfvars"
+                }
             }
         }
 
@@ -36,7 +46,7 @@ pipeline {
                 ok "Apply"
             }
             steps {
-                echo 'Approval received'
+                echo 'Approval granted'
             }
         }
 
@@ -45,7 +55,12 @@ pipeline {
                 branch 'dev'
             }
             steps {
-                bat "terraform apply -auto-approve -var-file=%BRANCH_NAME%.tfvars"
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    bat "terraform apply -auto-approve -var-file=%BRANCH_NAME%.tfvars"
+                }
             }
         }
     }
