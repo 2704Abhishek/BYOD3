@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         TF_IN_AUTOMATION = 'true'
-        TF_CLI_ARGS = '-no-color'
+        TF_CLI_ARGS      = '-no-color'
     }
 
     stages {
@@ -13,6 +13,10 @@ pipeline {
                 checkout scm
             }
         }
+
+        /* =========================
+           Terraform Init & Plan
+           ========================= */
 
         stage('Terraform Initialization') {
             steps {
@@ -37,20 +41,27 @@ pipeline {
             }
         }
 
+        /* =========================
+           Apply Approval
+           ========================= */
+
         stage('Validate Apply') {
-            when {
-                branch 'dev'
-            }
+            when { branch 'dev' }
             steps {
-                input message: 'Do you want to apply Terraform changes for DEV?', ok: 'Apply'
+                input {
+                    message "Do you want to APPLY Terraform changes for DEV?"
+                    ok "Apply"
+                }
                 echo 'Apply approved'
             }
         }
 
+        /* =========================
+           Apply + Capture Outputs
+           ========================= */
+
         stage('Terraform Apply & Capture Outputs') {
-            when {
-                branch 'dev'
-            }
+            when { branch 'dev' }
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
@@ -71,21 +82,29 @@ pipeline {
                         ).trim()
                     }
 
-                    echo "EC2 IP: ${env.INSTANCE_IP}"
-                    echo "EC2 ID: ${env.INSTANCE_ID}"
+                    echo "EC2 IP = ${env.INSTANCE_IP}"
+                    echo "EC2 ID = ${env.INSTANCE_ID}"
                 }
             }
         }
+
+        /* =========================
+           Dynamic Inventory
+           ========================= */
 
         stage('Create Dynamic Inventory') {
             steps {
                 bat """
                 echo [web] > dynamic_inventory.ini
-                echo %INSTANCE_IP% ansible_user=ec2-user >> dynamic_inventory.ini
+                echo %INSTANCE_IP% ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/terraform_key.pem >> dynamic_inventory.ini
                 """
                 bat "type dynamic_inventory.ini"
             }
         }
+
+        /* =========================
+           EC2 Health Check
+           ========================= */
 
         stage('Wait for EC2 Health') {
             steps {
@@ -97,6 +116,10 @@ pipeline {
                 }
             }
         }
+
+        /* =========================
+           Splunk Install & Test
+           ========================= */
 
         stage('Install Splunk') {
             steps {
@@ -116,9 +139,16 @@ pipeline {
             }
         }
 
+        /* =========================
+           Destroy Approval
+           ========================= */
+
         stage('Validate Destroy') {
             steps {
-                input message: 'Do you want to DESTROY the infrastructure?', ok: 'Destroy'
+                input {
+                    message "Do you want to DESTROY the infrastructure?"
+                    ok "Destroy"
+                }
             }
         }
 
@@ -134,16 +164,33 @@ pipeline {
         }
     }
 
+    /* =========================
+       Post Build Cleanup
+       ========================= */
+
     post {
         always {
             bat "if exist dynamic_inventory.ini del dynamic_inventory.ini"
         }
+
         failure {
-            bat "terraform destroy -auto-approve -var-file=%BRANCH_NAME%.tfvars"
+            withCredentials([[
+                $class: 'AmazonWebServicesCredentialsBinding',
+                credentialsId: 'aws-creds'
+            ]]) {
+                bat "terraform destroy -auto-approve -var-file=%BRANCH_NAME%.tfvars"
+            }
         }
+
         aborted {
-            bat "terraform destroy -auto-approve -var-file=%BRANCH_NAME%.tfvars"
+            withCredentials([[
+                $class: 'AmazonWebServicesCredentialsBinding',
+                credentialsId: 'aws-creds'
+            ]]) {
+                bat "terraform destroy -auto-approve -var-file=%BRANCH_NAME%.tfvars"
+            }
         }
+
         success {
             echo '✅ Pipeline completed successfully'
         }
