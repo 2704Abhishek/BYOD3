@@ -5,7 +5,7 @@ pipeline {
         TF_IN_AUTOMATION = 'true'
         TF_CLI_ARGS = '-no-color'
         AWS_CREDS = credentials('aws-creds')
-        SSH_CRED_ID = 'aws-deployer-ssh-key'
+        SSH_CRED_ID = 'aws-deployer-ssh-key1'
     }
 
     triggers {
