@@ -49,11 +49,11 @@ pipeline {
             when {
                 branch 'dev'
             }
-            input {
-                message "Do you want to apply Terraform changes for DEV?"
-                ok "Apply"
-            }
             steps {
+                input {
+                    message "Do you want to apply Terraform changes for DEV?"
+                    ok "Apply"
+                }
                 echo 'Apply approved'
             }
         }
@@ -148,9 +148,11 @@ pipeline {
            ========================= */
 
         stage('Validate Destroy') {
-            input {
-                message "Do you want to DESTROY the infrastructure?"
-                ok "Destroy"
+            steps {
+                input {
+                    message "Do you want to DESTROY the infrastructure?"
+                    ok "Destroy"
+                }
             }
         }
 
