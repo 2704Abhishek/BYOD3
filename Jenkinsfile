@@ -16,14 +16,24 @@ pipeline {
 
         stage('Terraform Initialization') {
             steps {
-                bat 'terraform init'
-                bat 'type %BRANCH_NAME%.tfvars'
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    bat 'terraform init'
+                    bat 'type %BRANCH_NAME%.tfvars'
+                }
             }
         }
 
         stage('Terraform Plan') {
             steps {
-                bat "terraform plan -var-file=%BRANCH_NAME%.tfvars"
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    bat "terraform plan -var-file=%BRANCH_NAME%.tfvars"
+                }
             }
         }
 
@@ -32,7 +42,7 @@ pipeline {
                 branch 'dev'
             }
             input {
-                message "Apply Terraform changes for DEV?"
+                message "Do you want to apply Terraform changes for DEV?"
                 ok "Apply"
             }
             steps {
@@ -45,7 +55,12 @@ pipeline {
                 branch 'dev'
             }
             steps {
-                bat "terraform apply -auto-approve -var-file=%BRANCH_NAME%.tfvars"
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-creds'
+                ]]) {
+                    bat "terraform apply -auto-approve -var-file=%BRANCH_NAME%.tfvars"
+                }
             }
         }
     }
@@ -59,5 +74,6 @@ pipeline {
         }
     }
 }
+
 
 // End of Jenkinsfile
