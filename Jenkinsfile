@@ -14,10 +14,6 @@ pipeline {
             }
         }
 
-        /* =========================
-           TASK 3 (OLD): INIT & PLAN
-           ========================= */
-
         stage('Terraform Initialization') {
             steps {
                 withCredentials([[
@@ -41,26 +37,15 @@ pipeline {
             }
         }
 
-        /* =========================
-           TASK 5 (OLD): APPLY GATE
-           ========================= */
-
         stage('Validate Apply') {
             when {
                 branch 'dev'
             }
             steps {
-                input {
-                    message "Do you want to apply Terraform changes for DEV?"
-                    ok "Apply"
-                }
+                input message: 'Do you want to apply Terraform changes for DEV?', ok: 'Apply'
                 echo 'Apply approved'
             }
         }
-
-        /* =========================
-           TASK 1 (NEW): APPLY + OUTPUT
-           ========================= */
 
         stage('Terraform Apply & Capture Outputs') {
             when {
@@ -92,10 +77,6 @@ pipeline {
             }
         }
 
-        /* =========================
-           TASK 2: DYNAMIC INVENTORY
-           ========================= */
-
         stage('Create Dynamic Inventory') {
             steps {
                 bat """
@@ -105,10 +86,6 @@ pipeline {
                 bat "type dynamic_inventory.ini"
             }
         }
-
-        /* =========================
-           TASK 3: EC2 HEALTH CHECK
-           ========================= */
 
         stage('Wait for EC2 Health') {
             steps {
@@ -120,10 +97,6 @@ pipeline {
                 }
             }
         }
-
-        /* =========================
-           TASK 4: SPLUNK INSTALL & TEST
-           ========================= */
 
         stage('Install Splunk') {
             steps {
@@ -143,16 +116,9 @@ pipeline {
             }
         }
 
-        /* =========================
-           TASK 5: DESTROY GATE
-           ========================= */
-
         stage('Validate Destroy') {
             steps {
-                input {
-                    message "Do you want to DESTROY the infrastructure?"
-                    ok "Destroy"
-                }
+                input message: 'Do you want to DESTROY the infrastructure?', ok: 'Destroy'
             }
         }
 
@@ -167,10 +133,6 @@ pipeline {
             }
         }
     }
-
-    /* =========================
-       POST BUILD CLEANUP
-       ========================= */
 
     post {
         always {
