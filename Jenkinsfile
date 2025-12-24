@@ -4,12 +4,6 @@ pipeline {
     environment {
         TF_IN_AUTOMATION = 'true'
         TF_CLI_ARGS = '-no-color'
-        AWS_CREDS = credentials('aws-creds')
-        SSH_CRED_ID = 'aws-deployer-ssh-key1'
-    }
-
-    triggers {
-        githubPush()
     }
 
     stages {
@@ -22,14 +16,14 @@ pipeline {
 
         stage('Terraform Initialization') {
             steps {
-                sh 'terraform init'
-                sh "cat ${env.BRANCH_NAME}.tfvars"
+                bat 'terraform init'
+                bat 'type %BRANCH_NAME%.tfvars'
             }
         }
 
         stage('Terraform Plan') {
             steps {
-                sh "terraform plan -var-file=${env.BRANCH_NAME}.tfvars"
+                bat "terraform plan -var-file=%BRANCH_NAME%.tfvars"
             }
         }
 
@@ -38,22 +32,32 @@ pipeline {
                 branch 'dev'
             }
             input {
-                message "Do you want to apply Terraform changes for DEV?"
+                message "Apply Terraform changes for DEV?"
                 ok "Apply"
             }
             steps {
-                echo 'Approval received for DEV branch'
+                echo 'Approval granted'
+            }
+        }
+
+        stage('Terraform Apply') {
+            when {
+                branch 'dev'
+            }
+            steps {
+                bat "terraform apply -auto-approve -var-file=%BRANCH_NAME%.tfvars"
             }
         }
     }
 
     post {
         success {
-            echo '✅ Pipeline completed successfully'
+            echo '✅ Pipeline executed successfully'
         }
         failure {
             echo '❌ Pipeline failed'
         }
     }
 }
+
 // End of Jenkinsfile
